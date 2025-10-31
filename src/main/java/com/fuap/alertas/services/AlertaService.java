@@ -3,6 +3,7 @@ package com.fuap.alertas.services;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -94,6 +95,7 @@ public class AlertaService {
         }
     }
 
+    @Transactional
     public void handleAlert(AlertaDTO alerta) {
         DispositivoDTO dispositivo = this.getDevice(alerta);
         if (dispositivo == null) {

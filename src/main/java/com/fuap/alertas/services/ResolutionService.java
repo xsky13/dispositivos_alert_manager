@@ -1,6 +1,7 @@
 package com.fuap.alertas.services;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.fuap.alertas.data.DTO.ResolutionDTO;
 import com.fuap.alertas.data.models.Resolution;
@@ -16,6 +17,7 @@ public class ResolutionService {
         this.resolutionRepository = resolutionRepository;
     }
 
+    @Transactional
     public void handleResolution(ResolutionDTO resolutionDTO) {
         var alerta = this.alertaService.buscarAlerta(resolutionDTO.alertaId());
         var dispositivo = this.alertaService.getDevice(alerta);
