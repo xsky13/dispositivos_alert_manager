@@ -1,0 +1,118 @@
+package com.fuap.alertas.services;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fuap.alertas.configuration.PubHandler;
+import com.fuap.alertas.data.DTO.AlertaDTO;
+import com.fuap.alertas.data.DTO.DispositivoDTO;
+import com.fuap.alertas.data.models.Alerta;
+import com.fuap.alertas.data.repository.AlertasRepository;
+import com.fuap.alertas.handlers.Handler;
+
+import reactor.core.publisher.Mono;
+
+@Service
+public class AlertaService {
+    private final WebClient webClient;
+    private final AlertasRepository alertaRepository;
+    private final Handler userHandler;
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    private final PubHandler.Gateway mqttAlertGateway;
+
+    public AlertaService(WebClient.Builder webClientBuilder, AlertasRepository alertaRepository,
+            @Qualifier("userChain") Handler handler, PubHandler.Gateway mqttAlertGateway) {
+        this.webClient = webClientBuilder.baseUrl("http://localhost:8080").build();
+        this.alertaRepository = alertaRepository;
+        this.userHandler = handler;
+        this.mqttAlertGateway = mqttAlertGateway;
+    }
+
+    private Alerta crearAlerta(int deviceId, String message, String nivel, Boolean exists, String timestamp) {
+        Alerta alertaGuardar = new Alerta();
+        alertaGuardar.setDeviceId(deviceId);
+        alertaGuardar.setMessage(message);
+        alertaGuardar.setDeviceExists(exists);
+        alertaGuardar.setTimestamp(timestamp);
+        alertaGuardar.setNivel(nivel);
+        return alertaGuardar;
+    }
+
+    private Alerta crearAlerta(int deviceId, String message, String nivel, Boolean exists, String timestamp,
+            int[] handlerUsers) {
+        Alerta alertaGuardar = new Alerta();
+        alertaGuardar.setDeviceId(deviceId);
+        alertaGuardar.setMessage(message);
+        alertaGuardar.setDeviceExists(exists);
+        alertaGuardar.setTimestamp(timestamp);
+        alertaGuardar.setNivel(nivel);
+        alertaGuardar.setHandlerUsers(handlerUsers);
+        return alertaGuardar;
+    }
+
+    public DispositivoDTO getDevice(AlertaDTO alerta) {
+        return this.webClient.get()
+                .uri("/api/dispositivos/" + alerta.deviceId())
+                .retrieve()
+                .onStatus(
+                        status -> status.value() == 404,
+                        _ -> Mono.empty())
+                .bodyToMono(DispositivoDTO.class)
+                .block();
+    }
+
+    public void updateDevice(DispositivoDTO dispositivo, String state) {
+        DispositivoDTO dispositivoActualizar = new DispositivoDTO(dispositivo.id(), dispositivo.name(),
+                dispositivo.description(), state, dispositivo.type(), dispositivo.schemaJson());
+        webClient.put().uri("/api/dispositivos/{id}", dispositivoActualizar.id()).bodyValue(dispositivoActualizar)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .block();
+    }
+
+    public void saveAlert(AlertaDTO alerta, DispositivoDTO dispositivo, int[] userIds) {
+        Alerta alertaGuardar = this.crearAlerta(dispositivo.id(), alerta.message(), alerta.nivel(), true,
+                alerta.timestamp(), userIds);
+        alertaRepository.save(alertaGuardar);
+    }
+
+    public void mandarAlerta(DispositivoDTO dispositivo, AlertaDTO alerta, int[] userIds) {
+        try {
+            AlertaDTO payload = new AlertaDTO(dispositivo.id(), alerta.message(), alerta.timestamp(), alerta.nivel(),
+                    userIds);
+
+            String json = this.objectMapper.writeValueAsString(payload);
+            mqttAlertGateway.sendToMqtt(json);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void handleAlert(AlertaDTO alerta) {
+        DispositivoDTO dispositivo = this.getDevice(alerta);
+        if (dispositivo == null) {
+            // guardar alerta como no existente
+            Alerta alertaGuardar = this.crearAlerta(0, alerta.message(), alerta.nivel(), false, alerta.timestamp());
+            alertaRepository.save(alertaGuardar);
+            return;
+        }
+
+        updateDevice(dispositivo, "alert");
+
+        int[] userIds = userHandler.handle(alerta.nivel());
+        saveAlert(alerta, dispositivo, userIds);
+
+        mandarAlerta(dispositivo, alerta, userIds);
+    }
+
+    public AlertaDTO buscarAlerta(int alertaId) {
+        Alerta alerta = alertaRepository.findById(alertaId).orElseThrow();
+        return new AlertaDTO(alerta.getId(), alerta.getMessage(), alerta.getTimestamp(), alerta.geNivel());
+    }
+}
