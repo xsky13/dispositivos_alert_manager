@@ -77,6 +77,13 @@ public class AlertaService {
                 .block();
     }
 
+    public void insertNotification(AlertaDTO alertaDTO, int userId) {
+        webClient.post().uri("/api/usuario/{id}/notificar", userId).bodyValue(alertaDTO)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .block();
+    }
+
     public void saveAlert(AlertaDTO alerta, DispositivoDTO dispositivo, int[] userIds) {
         Alerta alertaGuardar = this.crearAlerta(dispositivo.id(), alerta.message(), alerta.nivel(), true,
                 alerta.timestamp(), userIds);
@@ -108,6 +115,11 @@ public class AlertaService {
         updateDevice(dispositivo, "alert");
 
         int[] userIds = userHandler.handle(alerta.nivel());
+        // poner notificacion a todos los usuarios
+        // for (int i : userIds) {
+        //     this.insertNotification(alerta, i);
+        // }
+
         saveAlert(alerta, dispositivo, userIds);
 
         mandarAlerta(dispositivo, alerta, userIds);
