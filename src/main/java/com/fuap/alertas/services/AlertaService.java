@@ -27,13 +27,10 @@ public class AlertaService {
     private ObjectMapper objectMapper;
 
     private final PubHandler.Gateway mqttAlertGateway;
-    private final String serviceApiKey;
-
     @Autowired
     public AlertaService(WebClient.Builder webClientBuilder, AlertasRepository alertaRepository,
             @Qualifier("userChain") Handler handler, PubHandler.Gateway mqttAlertGateway,
             @Value("${service.dispositivos.api.key}") String serviceApiKey) {
-        this.serviceApiKey = serviceApiKey;
         this.webClient = webClientBuilder.baseUrl("http://localhost:8080")
                 .defaultHeader("X-Service-API-Key", serviceApiKey).build();
         this.alertaRepository = alertaRepository;
