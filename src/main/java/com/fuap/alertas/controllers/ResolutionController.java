@@ -1,24 +1,36 @@
 package com.fuap.alertas.controllers;
 
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.reactive.function.client.WebClient;
 
+import com.fuap.alertas.data.DTO.DispositivoDTO;
 import com.fuap.alertas.data.DTO.ResolutionDTO;
 import com.fuap.alertas.services.ResolutionService;
+
+import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/api/resolucion")
 public class ResolutionController {
     private final ResolutionService resolutionService;
+    private final WebClient webClient;
 
-    public ResolutionController(ResolutionService resService) {
+    public ResolutionController(ResolutionService resService, WebClient.Builder webClientBuilder) {
         this.resolutionService = resService;
+        this.webClient = webClientBuilder.baseUrl("http://localhost:8080").build();
     }
 
     @PostMapping
     public void Resolver(@RequestBody ResolutionDTO resolutionDTO) {
         this.resolutionService.handleResolution(resolutionDTO);
     }
+
 }
