@@ -2,6 +2,7 @@ package com.fuap.alertas.services;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -26,10 +27,15 @@ public class AlertaService {
     private ObjectMapper objectMapper;
 
     private final PubHandler.Gateway mqttAlertGateway;
+    private final String serviceApiKey;
 
+    @Autowired
     public AlertaService(WebClient.Builder webClientBuilder, AlertasRepository alertaRepository,
-            @Qualifier("userChain") Handler handler, PubHandler.Gateway mqttAlertGateway) {
-        this.webClient = webClientBuilder.baseUrl("http://localhost:8080").build();
+            @Qualifier("userChain") Handler handler, PubHandler.Gateway mqttAlertGateway,
+            @Value("${service.dispositivos.api.key}") String serviceApiKey) {
+        this.serviceApiKey = serviceApiKey;
+        this.webClient = webClientBuilder.baseUrl("http://localhost:8080")
+                .defaultHeader("X-Service-API-Key", serviceApiKey).build();
         this.alertaRepository = alertaRepository;
         this.userHandler = handler;
         this.mqttAlertGateway = mqttAlertGateway;
@@ -73,8 +79,7 @@ public class AlertaService {
                 dispositivo.description(), state, dispositivo.type(), dispositivo.schemaJson());
         webClient.put().uri("/api/dispositivos/{id}", dispositivoActualizar.id()).bodyValue(dispositivoActualizar)
                 .retrieve()
-                .bodyToMono(Void.class)
-                .block();
+                .bodyToMono(Void.class);
     }
 
     public void insertNotification(AlertaDTO alertaDTO, int userId) {
@@ -117,7 +122,7 @@ public class AlertaService {
         int[] userIds = userHandler.handle(alerta.nivel());
         // poner notificacion a todos los usuarios
         // for (int i : userIds) {
-        //     this.insertNotification(alerta, i);
+        // this.insertNotification(alerta, i);
         // }
 
         saveAlert(alerta, dispositivo, userIds);

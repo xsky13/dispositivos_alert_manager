@@ -14,7 +14,7 @@ public abstract class Handler {
     private String serviceApiKey;
 
     protected WebClient getWebClient() {
-        return webClientBuilder.baseUrl("http://localhost:8080").defaultHeader("X-Service-API-Key", serviceApiKey).build();
+        return webClientBuilder.baseUrl("http://localhost:8086").defaultHeader("X-Service-API-Key", serviceApiKey).build();
     }
 
     public Handler setNext(Handler nextHandler) {
