@@ -73,10 +73,11 @@ public class AlertaService {
 
     public void updateDevice(DispositivoDTO dispositivo, String state) {
         DispositivoDTO dispositivoActualizar = new DispositivoDTO(dispositivo.id(), dispositivo.name(),
-                dispositivo.description(), state, dispositivo.type(), dispositivo.schemaJson());
+                dispositivo.descripcion(), state, dispositivo.type(), dispositivo.schemaJson());
         webClient.put().uri("/api/dispositivos/{id}", dispositivoActualizar.id()).bodyValue(dispositivoActualizar)
                 .retrieve()
-                .bodyToMono(Void.class);
+                .bodyToMono(Void.class)
+                .subscribe();
     }
 
     public void insertNotification(AlertaDTO alertaDTO, int userId) {
