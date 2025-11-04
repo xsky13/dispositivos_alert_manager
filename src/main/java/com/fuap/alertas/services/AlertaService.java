@@ -87,16 +87,17 @@ public class AlertaService {
                 .block();
     }
 
-    public void saveAlert(AlertaDTO alerta, DispositivoDTO dispositivo, int[] userIds) {
+    public int saveAlert(AlertaDTO alerta, DispositivoDTO dispositivo, int[] userIds) {
         Alerta alertaGuardar = this.crearAlerta(dispositivo.id(), alerta.message(), alerta.nivel(), true,
                 alerta.timestamp(), userIds);
         alertaRepository.save(alertaGuardar);
+        return alertaGuardar.getId();
     }
 
     public void mandarAlerta(DispositivoDTO dispositivo, AlertaDTO alerta, int[] userIds) {
         try {
             AlertaDTO payload = new AlertaDTO(dispositivo.id(), alerta.message(), alerta.timestamp(), alerta.nivel(),
-                    userIds);
+                    userIds, alerta.alertaId());
 
             String json = this.objectMapper.writeValueAsString(payload);
             mqttAlertGateway.sendToMqtt(json);
@@ -123,7 +124,10 @@ public class AlertaService {
         // this.insertNotification(alerta, i);
         // }
 
-        saveAlert(alerta, dispositivo, userIds);
+        
+        int alertaId = saveAlert(alerta, dispositivo, userIds);
+        alerta = new AlertaDTO(dispositivo.id(), alerta.message(), alerta.timestamp(), alerta.nivel(), userIds,
+                alertaId);
 
         mandarAlerta(dispositivo, alerta, userIds);
     }

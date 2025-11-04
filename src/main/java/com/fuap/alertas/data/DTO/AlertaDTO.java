@@ -5,8 +5,9 @@ public record AlertaDTO(
         String message,
         String timestamp,
         String nivel,
-        int[] usuarios) {
+        int[] usuarios,
+        int alertaId) {
     public AlertaDTO(int deviceId, String message, String timestamp, String nivel) {
-        this(deviceId, message, timestamp, nivel, null);
+        this(deviceId, message, timestamp, nivel, null, 0);
     }
 }
