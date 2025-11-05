@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fuap.alertas.configuration.PubHandler;
 import com.fuap.alertas.data.DTO.AlertaDTO;
 import com.fuap.alertas.data.DTO.DispositivoDTO;
+import com.fuap.alertas.data.DTO.NotificacionDTO;
 import com.fuap.alertas.data.models.Alerta;
 import com.fuap.alertas.data.repository.AlertasRepository;
 import com.fuap.alertas.handlers.Handler;
@@ -21,6 +22,7 @@ import reactor.core.publisher.Mono;
 @Service
 public class AlertaService {
     private final WebClient webClient;
+    private final WebClient userWebClient;
     private final AlertasRepository alertaRepository;
     private final Handler userHandler;
     @Autowired
@@ -28,10 +30,14 @@ public class AlertaService {
 
     private final PubHandler.Gateway mqttAlertGateway;
     @Autowired
-    public AlertaService(WebClient.Builder webClientBuilder, AlertasRepository alertaRepository,
+    public AlertaService(WebClient.Builder webClientBuilder, WebClient.Builder userWebClientBuilder, AlertasRepository alertaRepository,
             @Qualifier("userChain") Handler handler, PubHandler.Gateway mqttAlertGateway,
-            @Value("${service.dispositivos.api.key}") String serviceApiKey) {
+            @Value("${service.dispositivos.api.key}") String serviceApiKey,
+            @Value("${service.usuarios.api.key}") String usuariosApiKey) {
         this.webClient = webClientBuilder.baseUrl("http://localhost:8080")
+                .defaultHeader("X-Service-API-Key", serviceApiKey).build();
+
+        this.userWebClient = userWebClientBuilder.baseUrl("http://localhost:8086")
                 .defaultHeader("X-Service-API-Key", serviceApiKey).build();
         this.alertaRepository = alertaRepository;
         this.userHandler = handler;
@@ -81,7 +87,8 @@ public class AlertaService {
     }
 
     public void insertNotification(AlertaDTO alertaDTO, int userId) {
-        webClient.post().uri("/api/usuario/{id}/notificar", userId).bodyValue(alertaDTO)
+        NotificacionDTO notificacion = new NotificacionDTO(0, alertaDTO.message(), alertaDTO.deviceId());
+        userWebClient.post().uri("/api/notificaciones/{id}", userId).bodyValue(notificacion)
                 .retrieve()
                 .bodyToMono(Void.class)
                 .block();
@@ -120,9 +127,9 @@ public class AlertaService {
 
         int[] userIds = userHandler.handle(alerta.nivel());
         // poner notificacion a todos los usuarios
-        // for (int i : userIds) {
-        // this.insertNotification(alerta, i);
-        // }
+        for (int i : userIds) {
+            this.insertNotification(alerta, i);
+        }
 
         
         int alertaId = saveAlert(alerta, dispositivo, userIds);
