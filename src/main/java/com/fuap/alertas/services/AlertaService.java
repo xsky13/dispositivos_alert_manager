@@ -38,7 +38,7 @@ public class AlertaService {
                 .defaultHeader("X-Service-API-Key", serviceApiKey).build();
 
         this.userWebClient = userWebClientBuilder.baseUrl("http://localhost:8086")
-                .defaultHeader("X-Service-API-Key", serviceApiKey).build();
+                .defaultHeader("X-Service-API-Key", usuariosApiKey).build();
         this.alertaRepository = alertaRepository;
         this.userHandler = handler;
         this.mqttAlertGateway = mqttAlertGateway;
