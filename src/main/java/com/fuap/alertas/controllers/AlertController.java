@@ -26,6 +26,11 @@ public class AlertController {
     }
 
     @GetMapping("/{id}")
+    public Alerta getById(@PathVariable int id) {
+        return alertaService.getById(id);
+    }
+
+    @GetMapping("/user/{id}")
     public List<Alerta> getByUser(@PathVariable int id) {
         return alertaService.getByUserId(id);
     }

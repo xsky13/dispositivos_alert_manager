@@ -31,8 +31,10 @@ public class AlertaService {
     private ObjectMapper objectMapper;
 
     private final PubHandler.Gateway mqttAlertGateway;
+
     @Autowired
-    public AlertaService(WebClient.Builder webClientBuilder, WebClient.Builder userWebClientBuilder, AlertasRepository alertaRepository,
+    public AlertaService(WebClient.Builder webClientBuilder, WebClient.Builder userWebClientBuilder,
+            AlertasRepository alertaRepository,
             @Qualifier("userChain") Handler handler, PubHandler.Gateway mqttAlertGateway,
             @Value("${service.dispositivos.api.key}") String serviceApiKey,
             @Value("${service.usuarios.api.key}") String usuariosApiKey) {
@@ -46,20 +48,18 @@ public class AlertaService {
         this.mqttAlertGateway = mqttAlertGateway;
     }
 
-
     // CRUD
     public List<Alerta> getAll() {
         return alertaRepository.findAll();
     }
 
+    public Alerta getById(int id) {
+        return alertaRepository.findById(id).orElseThrow();
+    }
+
     public List<Alerta> getByUserId(int id) {
         return alertaRepository.findByUserId(id);
     }
-
-
-
-
-
 
     private Alerta crearAlerta(int deviceId, String message, String nivel, Boolean exists, String timestamp) {
         Alerta alertaGuardar = new Alerta();
@@ -104,7 +104,8 @@ public class AlertaService {
     }
 
     public void insertNotification(AlertaDTO alertaDTO, int userId) {
-        NotificacionDTO notificacion = new NotificacionDTO(0, alertaDTO.message(), alertaDTO.deviceId());
+        NotificacionDTO notificacion = new NotificacionDTO(0, alertaDTO.message(), alertaDTO.deviceId(),
+                alertaDTO.alertaId());
         userWebClient.post().uri("/api/notificaciones/{id}", userId).bodyValue(notificacion)
                 .retrieve()
                 .bodyToMono(Void.class)
@@ -141,17 +142,16 @@ public class AlertaService {
         }
 
         updateDevice(dispositivo, "alert");
-
         int[] userIds = userHandler.handle(alerta.nivel());
+
+        int alertaId = saveAlert(alerta, dispositivo, userIds);
+        alerta = new AlertaDTO(dispositivo.id(), alerta.message(), alerta.timestamp(), alerta.nivel(), userIds,
+                alertaId);
+
         // poner notificacion a todos los usuarios
         for (int i : userIds) {
             this.insertNotification(alerta, i);
         }
-
-        
-        int alertaId = saveAlert(alerta, dispositivo, userIds);
-        alerta = new AlertaDTO(dispositivo.id(), alerta.message(), alerta.timestamp(), alerta.nivel(), userIds,
-                alertaId);
 
         mandarAlerta(dispositivo, alerta, userIds);
     }
