@@ -1,5 +1,7 @@
 package com.fuap.alertas.services;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,6 +45,21 @@ public class AlertaService {
         this.userHandler = handler;
         this.mqttAlertGateway = mqttAlertGateway;
     }
+
+
+    // CRUD
+    public List<Alerta> getAll() {
+        return alertaRepository.findAll();
+    }
+
+    public List<Alerta> getByUserId(int id) {
+        return alertaRepository.findByUserId(id);
+    }
+
+
+
+
+
 
     private Alerta crearAlerta(int deviceId, String message, String nivel, Boolean exists, String timestamp) {
         Alerta alertaGuardar = new Alerta();
@@ -143,4 +160,5 @@ public class AlertaService {
         Alerta alerta = alertaRepository.findById(alertaId).orElseThrow();
         return new AlertaDTO(alerta.getId(), alerta.getMessage(), alerta.getTimestamp(), alerta.geNivel());
     }
+
 }
